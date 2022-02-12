@@ -136,3 +136,32 @@ scheduler.enqueue(async () => {
 scheduler.waitForIdle()
     .then(() => console.log('The scheduler is now idle!'));
 ````
+## Pausing and resuming
+
+In the event the scheduler needs to suspend work. Call the `.pause()` function to stop the next task from starting. Pausing will not suspend an already executing task.
+
+```typescript
+import {Scheduler, TaskCollisionStrategy} from "async-scheduler";
+
+let scheduler = new Scheduler(10);
+
+scheduler.enqueue(async () => {
+    scheduler.enqueue(async () => {
+        scheduler.enqueue(async () => {
+            console.log("A")
+        });
+    });
+});
+
+scheduler.pause() // stops the next task from starting automatically
+
+scheduler.enqueue(async () => {
+    scheduler.enqueue(async () => {
+        scheduler.enqueue(async () => {
+            console.log("B")
+        });
+    });
+});
+
+setTimeout(() => scheduler.resume(), 10000) // Resume scheduling after 10s
+```
