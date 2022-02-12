@@ -43,6 +43,7 @@ export default class Scheduler {
     private _isExecuting: boolean = false;
     private _idleListeners: Resolvable<void>[] = [];
     private readonly _errorLog: LoggerFunc;
+    private _isPaused: boolean = false;
 
     constructor(maxConcurrentTasks: number, options: SchedulerOptions = {}) {
         this._maxConcurrentTasks = maxConcurrentTasks;
@@ -85,6 +86,19 @@ export default class Scheduler {
             // Queue will be executed on next tick
             setTimeout(this._executeNextTasks.bind(this));
         }
+    }
+
+    pause() {
+        if (this._isPaused === false) {
+            this._isPaused = true;
+        }
+    }
+
+    resume() {
+      if (this._isPaused) {
+        this._isPaused = false
+        this._executeNextTasks()
+      }
     }
 
     get executingTasks(): number {
@@ -138,25 +152,27 @@ export default class Scheduler {
                 return;
             }
             task.state = ExecutionState.EXECUTING;
-            this._executeTask(task)
-                .then((result) => {
-                    for (const { resolve } of task.listeners) {
-                        try {
-                            resolve(result);
-                        } catch (e) {
-                            this._errorLog('An error occurred while resolving listener', e);
+            if (this._isPaused === false) {
+                this._executeTask(task)
+                    .then((result) => {
+                        for (const { resolve } of task.listeners) {
+                            try {
+                                resolve(result);
+                            } catch (e) {
+                                this._errorLog('An error occurred while resolving listener', e);
+                            }
                         }
-                    }
-                })
-                .catch((error) => {
-                    for (const { reject } of task.listeners) {
-                        try {
-                            reject(error);
-                        } catch (e) {
-                            this._errorLog('An error occurred while rejecting listener', e);
+                    })
+                    .catch((error) => {
+                        for (const { reject } of task.listeners) {
+                            try {
+                                reject(error);
+                            } catch (e) {
+                                this._errorLog('An error occurred while rejecting listener', e);
+                            }
                         }
-                    }
-                });
+                    });
+            }
         }
     }
 
